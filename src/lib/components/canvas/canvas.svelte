@@ -168,23 +168,40 @@
 
 		for (const img of images) {
 			const localImageData = imageElements.get(img.id);
-			if (!localImageData) continue;
-			if (!localImageData.isLoaded) continue;
-			// Increase size if selected
+			if (!localImageData?.isLoaded) continue;
+
+			const isSelected = selectedImageId === img.id;
+
 			console.log('selectedImageId:', selectedImageId);
 			console.log('img.id:', img.id);
-			if (selectedImageId === img.id) {
+
+			if (isSelected) {
 				console.log('SCALING SELECTED IMAGE');
+
+				const centerX = localImageData.localX + localImageData.width / 2;
+				const centerY = localImageData.localY + localImageData.height / 2;
+
+				imgCtx.save();
+				imgCtx.translate(centerX, centerY);
 				imgCtx.scale(1.1, 1.1);
+				imgCtx.drawImage(
+					localImageData.img,
+					-localImageData.width / 2,
+					-localImageData.height / 2,
+					localImageData.width,
+					localImageData.height
+				);
+				imgCtx.restore();
+			} else {
+				console.log(localImageData);
+				imgCtx.drawImage(
+					localImageData.img,
+					localImageData.localX,
+					localImageData.localY,
+					localImageData.width,
+					localImageData.height
+				);
 			}
-			console.log(localImageData);
-			imgCtx.drawImage(
-				localImageData.img,
-				localImageData.localX,
-				localImageData.localY,
-				localImageData.width,
-				localImageData.height
-			);
 		}
 
 		imgCtx.restore();
