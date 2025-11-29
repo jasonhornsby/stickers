@@ -31,9 +31,9 @@
 	let logicalHeight = $state(0);
 
 	const imageElements = new SvelteMap<string, LocalImageData>();
-	const selectedImage = $derived(
-		Object.values(imageElements).find((localImage) => localImage.isSelected)
-	);
+	let selectedImageId = $state<string | null>(null);
+
+	$inspect('selectedImageId:', selectedImageId);
 	$inspect(imageElements);
 
 	let images: StoredImage[] = $state(initialImages);
@@ -72,11 +72,10 @@
 				imageElements.set(img.id, {
 					isLoaded: true,
 					img: localImageData.img,
-					localX: img.x * dpr - newWidth / 2,
-					localY: img.y * dpr - newHeight / 2,
+					localX: img.x * dpr - (newWidth * dpr) / 2,
+					localY: img.y * dpr - (newHeight * dpr) / 2,
 					width: newWidth * dpr,
-					height: newHeight * dpr,
-					isSelected: false
+					height: newHeight * dpr
 				});
 			};
 			localImageData.img.src = img.src;
@@ -162,6 +161,7 @@
 	}
 
 	function drawImages(): void {
+		console.log('starting to draw images');
 		imgCtx.clearRect(0, 0, logicalWidth, logicalHeight);
 		imgCtx.save();
 		imgCtx.translate(offsetX, offsetY);
@@ -171,15 +171,10 @@
 			if (!localImageData) continue;
 			if (!localImageData.isLoaded) continue;
 			// Increase size if selected
-			if (localImageData.isSelected) {
-				// This scales everything not just the selected image
-				console.log(
-					'scaling image',
-					localImageData.localX,
-					localImageData.localY,
-					localImageData.width,
-					localImageData.height
-				);
+			console.log('selectedImageId:', selectedImageId);
+			console.log('img.id:', img.id);
+			if (selectedImageId === img.id) {
+				console.log('SCALING SELECTED IMAGE');
 				imgCtx.scale(1.1, 1.1);
 			}
 			console.log(localImageData);
@@ -236,29 +231,15 @@
 	}
 
 	function handleImageClick(id: string): void {
-		const localImage = imageElements.get(id);
-		if (!localImage || !localImage.isLoaded) {
-			throw new Error(`Image with id ${id} not found`);
+		if (selectedImageId === id) {
+			selectedImageId = null;
+			return;
 		}
-		localImage.isSelected = !localImage.isSelected;
-		const img = images.find((img) => img.id === id);
-		if (!img) {
-			throw new Error(`Image with id ${id} not found`);
-		}
-
-		console.log('clicked on image', $state.snapshot(img));
-
-		onSelectedImageChanged(img);
+		selectedImageId = id;
 	}
 
 	function handleBackgroundClick(x: number, y: number): void {
-		const selectedImage = Object.values(imageElements).find((localImage) => localImage.isSelected);
-		console.log('selectedImage:', $state.snapshot(selectedImage));
-		if (selectedImage) {
-			selectedImage.isSelected = false;
-			onSelectedImageChanged(null);
-			return;
-		}
+		selectedImageId = null;
 		console.log('clicked on background', x, y);
 	}
 
@@ -365,8 +346,17 @@
 
 	$effect(() => {
 		images;
-		selectedImage;
+		selectedImageId;
 		drawImages();
+	});
+
+	$effect(() => {
+		const selectedImage = selectedImageId ? images.find((img) => img.id === selectedImageId) : null;
+		if (selectedImage) {
+			onSelectedImageChanged(selectedImage);
+		} else {
+			onSelectedImageChanged(null);
+		}
 	});
 </script>
 

@@ -1,6 +1,9 @@
 
 
-
+/**
+ * LocalImageData is a type that represents the data for an image on the canvas.
+ * All properties are scaled by the device pixel ratio
+ */
 export type LocalImageData =
     {
         isLoaded: false,
@@ -12,5 +15,4 @@ export type LocalImageData =
         localY: number,
         width: number,
         height: number,
-        isSelected: boolean,
     }
