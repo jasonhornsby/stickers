@@ -1,5 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { Image } from '$lib/image';
+
+	let {
+		initialImages,
+		onSelectedImageChanged
+	}: { initialImages: Image[]; onSelectedImageChanged: (image: Image | null) => void } = $props();
 
 	let bgCanvas: HTMLCanvasElement;
 	let imgCanvas: HTMLCanvasElement;
@@ -21,15 +27,7 @@
 	let logicalWidth = $state(0);
 	let logicalHeight = $state(0);
 
-	type Image = {
-		img: HTMLImageElement;
-		x: number;
-		y: number;
-		width: number;
-		height: number;
-	};
-
-	let images: Image[] = $state([]);
+	let images: Image[] = $state(initialImages);
 
 	onMount(() => {
 		bgCtx = bgCanvas.getContext('2d')!;
@@ -130,6 +128,10 @@
 		imgCtx.translate(offsetX, offsetY);
 
 		for (const img of images) {
+			// Increase size if selected
+			if (img.selected) {
+				imgCtx.scale(1.1, 1.1);
+			}
 			imgCtx.drawImage(img.img, img.x, img.y, img.width, img.height);
 		}
 
@@ -149,7 +151,8 @@
 				x: x - newWidth / 2,
 				y: y - newHeight / 2,
 				width: newWidth,
-				height: newHeight
+				height: newHeight,
+				selected: false
 			});
 		};
 		img.src = src;
@@ -190,11 +193,21 @@
 	}
 
 	function handleImageClick(img: Image): void {
+		// Mark the image as selected
+		img.selected = true;
+		onSelectedImageChanged(img);
 		console.log('clicked on image', $state.snapshot(img));
 	}
 
 	function handleBackgroundClick(x: number, y: number): void {
+		for (const img of images) {
+			if (img.selected) {
+				img.selected = false;
+				return;
+			}
+		}
 		console.log('clicked on background', x, y);
+		onSelectedImageChanged(null);
 	}
 
 	function handleMouseDown(e: MouseEvent): void {

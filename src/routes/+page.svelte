@@ -1,11 +1,14 @@
-<script>
+<script lang="ts">
 	import Canvas from '$lib/components/canvas/canvas.svelte';
+	import type { Image } from '$lib/image';
+
+	let selectedImage: Image | null = $state(null);
+
+	function setSelectedImage(image: Image | null): void {
+		selectedImage = image;
+	}
 </script>
 
 <div class="relative h-dvh w-full overflow-hidden bg-green-100">
-	<Canvas />
-
-	<div class="absolute bottom-0 left-0 p-2">
-		<button class="rounded-md bg-red-200 p-2">Reset</button>
-	</div>
+	<Canvas initialImages={[]} onSelectedImageChanged={setSelectedImage} />
 </div>
