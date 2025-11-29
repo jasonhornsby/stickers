@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Image } from '$lib/image';
+	import type { StoredImage } from '$lib/image';
+	import type { LocalImageData } from './canvas.types';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	let {
 		initialImages,
 		onSelectedImageChanged
-	}: { initialImages: Image[]; onSelectedImageChanged: (image: Image | null) => void } = $props();
+	}: { initialImages: StoredImage[]; onSelectedImageChanged: (image: StoredImage | null) => void } =
+		$props();
 
 	let bgCanvas: HTMLCanvasElement;
 	let imgCanvas: HTMLCanvasElement;
@@ -27,7 +30,13 @@
 	let logicalWidth = $state(0);
 	let logicalHeight = $state(0);
 
-	let images: Image[] = $state(initialImages);
+	const imageElements = new SvelteMap<string, LocalImageData>();
+	const selectedImage = $derived(
+		Object.values(imageElements).find((localImage) => localImage.isSelected)
+	);
+	$inspect(imageElements);
+
+	let images: StoredImage[] = $state(initialImages);
 
 	onMount(() => {
 		bgCtx = bgCanvas.getContext('2d')!;
@@ -40,18 +49,39 @@
 		resizeCanvas();
 		window.addEventListener('resize', resizeCanvas);
 
-		// Load background texture
-		const bgImage = new Image();
-		bgImage.onload = () => {
-			backgroundImage = bgImage;
-			drawBackground();
-		};
-		bgImage.src = './bg.jpg';
-
-		addImage('./logo.png', 0, 0, 400);
+		loadBackgroundImage();
+		loadImages();
 
 		return () => window.removeEventListener('resize', resizeCanvas);
 	});
+
+	function loadImages(): void {
+		for (const img of initialImages) {
+			const localImageData: LocalImageData = {
+				img: new Image(),
+				isLoaded: false
+			};
+			imageElements.set(img.id, localImageData);
+			localImageData.img.onload = () => {
+				const width = localImageData.img.width;
+				const height = localImageData.img.height;
+				const ratio = width / height;
+				const newWidth = 200;
+				const newHeight = newWidth / ratio;
+
+				imageElements.set(img.id, {
+					isLoaded: true,
+					img: localImageData.img,
+					localX: img.x * dpr - newWidth / 2,
+					localY: img.y * dpr - newHeight / 2,
+					width: newWidth * dpr,
+					height: newHeight * dpr,
+					isSelected: false
+				});
+			};
+			localImageData.img.src = img.src;
+		}
+	}
 
 	function resizeCanvas(): void {
 		const rect = bgCanvas.getBoundingClientRect();
@@ -81,6 +111,15 @@
 			drawBackground();
 			drawImages();
 		}
+	}
+
+	function loadBackgroundImage(): void {
+		const bgImage = new Image();
+		bgImage.onload = () => {
+			backgroundImage = bgImage;
+			drawBackground();
+		};
+		bgImage.src = './bg.jpg';
 	}
 
 	function drawBackground(): void {
@@ -128,34 +167,32 @@
 		imgCtx.translate(offsetX, offsetY);
 
 		for (const img of images) {
+			const localImageData = imageElements.get(img.id);
+			if (!localImageData) continue;
+			if (!localImageData.isLoaded) continue;
 			// Increase size if selected
-			if (img.selected) {
+			if (localImageData.isSelected) {
+				// This scales everything not just the selected image
+				console.log(
+					'scaling image',
+					localImageData.localX,
+					localImageData.localY,
+					localImageData.width,
+					localImageData.height
+				);
 				imgCtx.scale(1.1, 1.1);
 			}
-			imgCtx.drawImage(img.img, img.x, img.y, img.width, img.height);
+			console.log(localImageData);
+			imgCtx.drawImage(
+				localImageData.img,
+				localImageData.localX,
+				localImageData.localY,
+				localImageData.width,
+				localImageData.height
+			);
 		}
 
 		imgCtx.restore();
-	}
-
-	function addImage(src: string, x: number, y: number, intendedWidth: number = 100): void {
-		const img = new Image();
-		img.onload = () => {
-			const width = img.width;
-			const height = img.height;
-			const ratio = width / height;
-			const newWidth = intendedWidth;
-			const newHeight = newWidth / ratio;
-			images.push({
-				img,
-				x: x - newWidth / 2,
-				y: y - newHeight / 2,
-				width: newWidth,
-				height: newHeight,
-				selected: false
-			});
-		};
-		img.src = src;
 	}
 
 	function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
@@ -176,14 +213,20 @@
 	function handleClick(e: MouseEvent): void {
 		const { x, y } = getCanvasCoordinates(e);
 
-		for (const img of images) {
-			if (x > img.x && x < img.x + img.width && y > img.y && y < img.y + img.height) {
+		for (const [id, localImageData] of imageElements) {
+			if (!localImageData.isLoaded) continue;
+			if (
+				x > localImageData.localX &&
+				x < localImageData.localX + localImageData.width &&
+				y > localImageData.localY &&
+				y < localImageData.localY + localImageData.height
+			) {
 				// Get pixel data at mouse position
 				const pixel = getPixelAtMousePosition(e);
 				const isTransparent = pixel[3] === 0;
 
 				if (!isTransparent) {
-					handleImageClick(img);
+					handleImageClick(id);
 					return;
 				}
 			}
@@ -192,22 +235,31 @@
 		handleBackgroundClick(x, y);
 	}
 
-	function handleImageClick(img: Image): void {
-		// Mark the image as selected
-		img.selected = true;
-		onSelectedImageChanged(img);
+	function handleImageClick(id: string): void {
+		const localImage = imageElements.get(id);
+		if (!localImage || !localImage.isLoaded) {
+			throw new Error(`Image with id ${id} not found`);
+		}
+		localImage.isSelected = !localImage.isSelected;
+		const img = images.find((img) => img.id === id);
+		if (!img) {
+			throw new Error(`Image with id ${id} not found`);
+		}
+
 		console.log('clicked on image', $state.snapshot(img));
+
+		onSelectedImageChanged(img);
 	}
 
 	function handleBackgroundClick(x: number, y: number): void {
-		for (const img of images) {
-			if (img.selected) {
-				img.selected = false;
-				return;
-			}
+		const selectedImage = Object.values(imageElements).find((localImage) => localImage.isSelected);
+		console.log('selectedImage:', $state.snapshot(selectedImage));
+		if (selectedImage) {
+			selectedImage.isSelected = false;
+			onSelectedImageChanged(null);
+			return;
 		}
 		console.log('clicked on background', x, y);
-		onSelectedImageChanged(null);
 	}
 
 	function handleMouseDown(e: MouseEvent): void {
@@ -234,6 +286,7 @@
 		offsetY = e.clientY - startY;
 		drawBackground();
 		drawImages();
+		e.preventDefault();
 	}
 
 	function handleMouseUp(e: MouseEvent): void {
@@ -312,6 +365,7 @@
 
 	$effect(() => {
 		images;
+		selectedImage;
 		drawImages();
 	});
 </script>

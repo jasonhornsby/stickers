@@ -1,14 +1,18 @@
 <script lang="ts">
 	import Canvas from '$lib/components/canvas/canvas.svelte';
-	import type { Image } from '$lib/image';
+	import type { StoredImage } from '$lib/image';
 
-	let selectedImage: Image | null = $state(null);
+	const { data } = $props();
 
-	function setSelectedImage(image: Image | null): void {
+	let selectedImage: StoredImage | null = $state(null);
+
+	function setSelectedImage(image: StoredImage | null): void {
 		selectedImage = image;
 	}
+
+	$inspect('selectedImage:', selectedImage);
 </script>
 
 <div class="relative h-dvh w-full overflow-hidden bg-green-100">
-	<Canvas initialImages={[]} onSelectedImageChanged={setSelectedImage} />
+	<Canvas initialImages={data.initialImages} onSelectedImageChanged={setSelectedImage} />
 </div>

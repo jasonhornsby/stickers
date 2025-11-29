@@ -1,11 +1,10 @@
 
-
-
-export type Image = {
-    img: HTMLImageElement;
+export type StoredImage = {
+    id: string;
     x: number;
     y: number;
+    src: string;
     width: number;
     height: number;
-    selected: boolean;
-};
+    type: 'sticker' | 'logo';
+}
