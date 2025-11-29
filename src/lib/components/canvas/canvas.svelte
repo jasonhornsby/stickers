@@ -1,14 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 
-	let canvas: HTMLCanvasElement;
-	let ctx: CanvasRenderingContext2D;
+	let bgCanvas: HTMLCanvasElement;
+	let imgCanvas: HTMLCanvasElement;
+	let bgCtx: CanvasRenderingContext2D;
+	let imgCtx: CanvasRenderingContext2D;
 	let isDragging: boolean = false;
 	let startX: number, startY: number;
 	let offsetX: number = 0,
 		offsetY: number = 0;
 	let isInitialized: boolean = false;
 	let backgroundImage: HTMLImageElement | null = null;
+
+	let dpr = $state(1);
+	let logicalWidth = $state(0);
+	let logicalHeight = $state(0);
 
 	type Image = {
 		img: HTMLImageElement;
@@ -21,7 +27,13 @@
 	let images: Image[] = $state([]);
 
 	onMount(() => {
-		ctx = canvas.getContext('2d')!;
+		bgCtx = bgCanvas.getContext('2d')!;
+		imgCtx = imgCanvas.getContext('2d')!;
+
+		dpr = window.devicePixelRatio || 1;
+		logicalWidth = bgCanvas.width / dpr;
+		logicalHeight = bgCanvas.height / dpr;
+
 		resizeCanvas();
 		window.addEventListener('resize', resizeCanvas);
 
@@ -29,7 +41,7 @@
 		const bgImage = new Image();
 		bgImage.onload = () => {
 			backgroundImage = bgImage;
-			draw();
+			drawBackground();
 		};
 		bgImage.src = './bg.jpg';
 
@@ -39,15 +51,21 @@
 	});
 
 	function resizeCanvas(): void {
-		const dpr = window.devicePixelRatio || 1;
-		const rect = canvas.getBoundingClientRect();
+		const rect = bgCanvas.getBoundingClientRect();
 
-		// Set the canvas buffer size (accounting for DPR)
-		canvas.width = rect.width * dpr;
-		canvas.height = rect.height * dpr;
+		// Set the canvas buffer size (accounting for DPR) for both canvases
+		bgCanvas.width = rect.width * dpr;
+		bgCanvas.height = rect.height * dpr;
+		imgCanvas.width = rect.width * dpr;
+		imgCanvas.height = rect.height * dpr;
 
-		// Scale the context to match DPR
-		ctx.scale(dpr, dpr);
+		// Update logical dimensions
+		logicalWidth = rect.width;
+		logicalHeight = rect.height;
+
+		// Scale the context to match DPR for both canvases
+		bgCtx.scale(dpr, dpr);
+		imgCtx.scale(dpr, dpr);
 
 		// Center the canvas on first initialization
 		if (!isInitialized) {
@@ -56,21 +74,21 @@
 			isInitialized = true;
 		}
 
-		if (ctx) draw();
+		if (bgCtx && imgCtx) {
+			drawBackground();
+			drawImages();
+		}
 	}
 
-	function draw(): void {
-		const dpr = window.devicePixelRatio || 1;
-		const logicalWidth = canvas.width / dpr;
-		const logicalHeight = canvas.height / dpr;
-		ctx.clearRect(0, 0, logicalWidth, logicalHeight);
-		ctx.save();
-		ctx.translate(offsetX, offsetY);
+	function drawBackground(): void {
+		bgCtx.clearRect(0, 0, logicalWidth, logicalHeight);
+		bgCtx.save();
+		bgCtx.translate(offsetX, offsetY);
 
 		// Draw repeating background texture - only visible tiles
 		if (backgroundImage) {
-			const tileWidth = backgroundImage.width;
-			const tileHeight = backgroundImage.height;
+			const tileWidth = backgroundImage.width * 0.7;
+			const tileHeight = backgroundImage.height * 0.7;
 
 			// Calculate visible area in world coordinates
 			const visibleLeft = -offsetX;
@@ -87,20 +105,33 @@
 			// Draw only the visible tiles
 			for (let row = startRow; row <= endRow; row++) {
 				for (let col = startCol; col <= endCol; col++) {
-					ctx.drawImage(backgroundImage, col * tileWidth, row * tileHeight, tileWidth, tileHeight);
+					bgCtx.drawImage(
+						backgroundImage,
+						col * tileWidth,
+						row * tileHeight,
+						tileWidth,
+						tileHeight
+					);
 				}
 			}
 		}
 
+		bgCtx.restore();
+	}
+
+	function drawImages(): void {
+		imgCtx.clearRect(0, 0, logicalWidth, logicalHeight);
+		imgCtx.save();
+		imgCtx.translate(offsetX, offsetY);
+
 		for (const img of images) {
-			ctx.drawImage(img.img, img.x, img.y, img.width, img.height);
+			imgCtx.drawImage(img.img, img.x, img.y, img.width, img.height);
 		}
 
-		ctx.restore();
+		imgCtx.restore();
 	}
 
 	function addImage(src: string, x: number, y: number, intendedWidth: number = 100): void {
-		console.log('addImage', src);
 		const img = new Image();
 		img.onload = () => {
 			const width = img.width;
@@ -119,11 +150,47 @@
 		img.src = src;
 	}
 
+	function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
+		const rect = imgCanvas.getBoundingClientRect();
+		return {
+			x: e.clientX - rect.left - offsetX,
+			y: e.clientY - rect.top - offsetY
+		};
+	}
+
+	function getPixelAtMousePosition(e: MouseEvent): Uint8ClampedArray {
+		const rect = imgCanvas.getBoundingClientRect();
+		const screenX = (e.clientX - rect.left) * dpr;
+		const screenY = (e.clientY - rect.top) * dpr;
+		return imgCtx.getImageData(screenX, screenY, 1, 1).data;
+	}
+
+	function handleClick(e: MouseEvent): void {
+		const { x, y } = getCanvasCoordinates(e);
+
+		for (const img of images) {
+			if (x > img.x && x < img.x + img.width && y > img.y && y < img.y + img.height) {
+				// Get pixel data at mouse position
+				const pixel = getPixelAtMousePosition(e);
+				const isTransparent = pixel[3] === 0;
+
+				if (!isTransparent) {
+					handleImageClick(img);
+					return;
+				}
+			}
+		}
+	}
+
+	function handleImageClick(img: Image): void {
+		console.log('clicked on image', img);
+	}
+
 	function handleMouseDown(e: MouseEvent): void {
 		isDragging = true;
 		startX = e.clientX - offsetX;
 		startY = e.clientY - offsetY;
-		canvas.style.cursor = 'grabbing';
+		imgCanvas.style.cursor = 'grabbing';
 	}
 
 	function handleMouseMove(e: MouseEvent): void {
@@ -131,18 +198,19 @@
 
 		offsetX = e.clientX - startX;
 		offsetY = e.clientY - startY;
-		draw();
+		drawBackground();
+		drawImages();
 	}
 
 	function handleMouseUp(): void {
 		isDragging = false;
-		canvas.style.cursor = 'grab';
+		imgCanvas.style.cursor = 'grab';
 	}
 
 	function handleMouseLeave(): void {
 		if (isDragging) {
 			isDragging = false;
-			canvas.style.cursor = 'grab';
+			imgCanvas.style.cursor = 'grab';
 		}
 	}
 
@@ -164,7 +232,8 @@
 		const touch = e.touches[0];
 		offsetX = touch.clientX - startX;
 		offsetY = touch.clientY - startY;
-		draw();
+		drawBackground();
+		drawImages();
 	}
 
 	function handleTouchEnd(e: TouchEvent): void {
@@ -175,31 +244,53 @@
 
 	$effect(() => {
 		images;
-		draw();
+		drawImages();
 	});
 </script>
 
-<canvas
-	bind:this={canvas}
-	class="h-full w-full"
-	onmousedown={handleMouseDown}
-	onmousemove={handleMouseMove}
-	onmouseup={handleMouseUp}
-	onmouseleave={handleMouseLeave}
-	ontouchstart={handleTouchStart}
-	ontouchmove={handleTouchMove}
-	ontouchend={handleTouchEnd}
-></canvas>
+<div class="canvas-container">
+	<canvas bind:this={bgCanvas} class="canvas-layer background-canvas"></canvas>
+	<canvas
+		bind:this={imgCanvas}
+		class="canvas-layer images-canvas"
+		onclick={handleClick}
+		onmousedown={handleMouseDown}
+		onmousemove={handleMouseMove}
+		onmouseup={handleMouseUp}
+		onmouseleave={handleMouseLeave}
+		ontouchstart={handleTouchStart}
+		ontouchmove={handleTouchMove}
+		ontouchend={handleTouchEnd}
+	></canvas>
+</div>
 
 <style>
-	canvas {
-		border: 1px solid #ccc;
-		display: block;
+	.canvas-container {
+		position: relative;
 		width: 100%;
+		height: 100%;
+		border: 1px solid #ccc;
+	}
+
+	.canvas-layer {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		display: block;
+	}
+
+	.background-canvas {
+		z-index: 1;
+	}
+
+	.images-canvas {
+		z-index: 2;
 		cursor: grab;
 	}
 
-	canvas:active {
+	.images-canvas:active {
 		cursor: grabbing;
 	}
 </style>
