@@ -7,10 +7,15 @@
 	let imgCtx: CanvasRenderingContext2D;
 	let isDragging: boolean = false;
 	let startX: number, startY: number;
+	let mouseDownX: number, mouseDownY: number; // Track initial click position
+	let hasMoved: boolean = false; // Track if mouse has moved during drag
 	let offsetX: number = 0,
 		offsetY: number = 0;
 	let isInitialized: boolean = false;
 	let backgroundImage: HTMLImageElement | null = null;
+	let cursor: 'grab' | 'grabbing' | 'pointer' = $state('grab');
+
+	const CLICK_THRESHOLD = 5; // Pixels - movement below this is considered a click, not a drag
 
 	let dpr = $state(1);
 	let logicalWidth = $state(0);
@@ -180,21 +185,37 @@
 				}
 			}
 		}
+
+		handleBackgroundClick(x, y);
 	}
 
 	function handleImageClick(img: Image): void {
-		console.log('clicked on image', img);
+		console.log('clicked on image', $state.snapshot(img));
+	}
+
+	function handleBackgroundClick(x: number, y: number): void {
+		console.log('clicked on background', x, y);
 	}
 
 	function handleMouseDown(e: MouseEvent): void {
 		isDragging = true;
 		startX = e.clientX - offsetX;
 		startY = e.clientY - offsetY;
-		imgCanvas.style.cursor = 'grabbing';
+		mouseDownX = e.clientX;
+		mouseDownY = e.clientY;
+		hasMoved = false;
+		cursor = 'grabbing';
 	}
 
 	function handleMouseMove(e: MouseEvent): void {
 		if (!isDragging) return;
+
+		// Check if mouse has moved beyond threshold
+		const deltaX = Math.abs(e.clientX - mouseDownX);
+		const deltaY = Math.abs(e.clientY - mouseDownY);
+		if (deltaX > CLICK_THRESHOLD || deltaY > CLICK_THRESHOLD) {
+			hasMoved = true;
+		}
 
 		offsetX = e.clientX - startX;
 		offsetY = e.clientY - startY;
@@ -202,15 +223,21 @@
 		drawImages();
 	}
 
-	function handleMouseUp(): void {
+	function handleMouseUp(e: MouseEvent): void {
+		// Only trigger click if the mouse didn't move significantly
+		if (!hasMoved) {
+			handleClick(e);
+		}
+
 		isDragging = false;
-		imgCanvas.style.cursor = 'grab';
+		hasMoved = false;
+		cursor = 'grab';
 	}
 
 	function handleMouseLeave(): void {
 		if (isDragging) {
 			isDragging = false;
-			imgCanvas.style.cursor = 'grab';
+			cursor = 'grab';
 		}
 	}
 
@@ -222,6 +249,10 @@
 			const touch = e.touches[0];
 			startX = touch.clientX - offsetX;
 			startY = touch.clientY - offsetY;
+			mouseDownX = touch.clientX;
+			mouseDownY = touch.clientY;
+			hasMoved = false;
+			cursor = 'grabbing';
 		}
 	}
 
@@ -230,6 +261,14 @@
 
 		e.preventDefault();
 		const touch = e.touches[0];
+
+		// Check if touch has moved beyond threshold
+		const deltaX = Math.abs(touch.clientX - mouseDownX);
+		const deltaY = Math.abs(touch.clientY - mouseDownY);
+		if (deltaX > CLICK_THRESHOLD || deltaY > CLICK_THRESHOLD) {
+			hasMoved = true;
+		}
+
 		offsetX = touch.clientX - startX;
 		offsetY = touch.clientY - startY;
 		drawBackground();
@@ -238,7 +277,23 @@
 
 	function handleTouchEnd(e: TouchEvent): void {
 		if (e.touches.length === 0) {
+			// Only trigger click if touch didn't move significantly
+			if (!hasMoved && e.changedTouches.length > 0) {
+				// Convert touch event to mouse-like coordinates for handleClick
+				const touch = e.changedTouches[0];
+				const mouseEvent = new MouseEvent('click', {
+					clientX: touch.clientX,
+					clientY: touch.clientY,
+					bubbles: true,
+					cancelable: true,
+					view: window
+				});
+				handleClick(mouseEvent);
+			}
+
 			isDragging = false;
+			hasMoved = false;
+			cursor = 'grab';
 		}
 	}
 
@@ -248,12 +303,15 @@
 	});
 </script>
 
-<div class="canvas-container">
-	<canvas bind:this={bgCanvas} class="canvas-layer background-canvas"></canvas>
+<div class="relative h-full w-full">
+	<canvas
+		bind:this={bgCanvas}
+		class="background-canvas absolute top-0 left-0 z-0 h-full w-full"
+		style="cursor: {cursor}"
+	></canvas>
 	<canvas
 		bind:this={imgCanvas}
-		class="canvas-layer images-canvas"
-		onclick={handleClick}
+		class="images-canvas absolute top-0 left-0 z-10 h-full w-full"
 		onmousedown={handleMouseDown}
 		onmousemove={handleMouseMove}
 		onmouseup={handleMouseUp}
@@ -263,34 +321,3 @@
 		ontouchend={handleTouchEnd}
 	></canvas>
 </div>
-
-<style>
-	.canvas-container {
-		position: relative;
-		width: 100%;
-		height: 100%;
-		border: 1px solid #ccc;
-	}
-
-	.canvas-layer {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		display: block;
-	}
-
-	.background-canvas {
-		z-index: 1;
-	}
-
-	.images-canvas {
-		z-index: 2;
-		cursor: grab;
-	}
-
-	.images-canvas:active {
-		cursor: grabbing;
-	}
-</style>
