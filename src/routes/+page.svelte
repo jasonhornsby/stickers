@@ -4,15 +4,11 @@
 
 	const { data } = $props();
 
-	let selectedImage: StoredImage | null = $state(null);
+	let selectedImageId: string | null = $state(null);
 
-	function setSelectedImage(image: StoredImage | null): void {
-		selectedImage = image;
-	}
-
-	$inspect('selectedImage:', selectedImage);
+	$inspect('selectedImage:', selectedImageId);
 </script>
 
 <div class="relative h-dvh w-full overflow-hidden bg-green-100">
-	<Canvas initialImages={data.initialImages} onSelectedImageChanged={setSelectedImage} />
+	<Canvas initialImages={data.initialImages} bind:selectedImageId />
 </div>

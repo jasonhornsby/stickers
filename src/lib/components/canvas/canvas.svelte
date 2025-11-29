@@ -6,9 +6,11 @@
 
 	let {
 		initialImages,
-		onSelectedImageChanged
-	}: { initialImages: StoredImage[]; onSelectedImageChanged: (image: StoredImage | null) => void } =
-		$props();
+		selectedImageId = $bindable(null)
+	}: {
+		initialImages: StoredImage[];
+		selectedImageId: string | null;
+	} = $props();
 
 	let bgCanvas: HTMLCanvasElement;
 	let imgCanvas: HTMLCanvasElement;
@@ -31,7 +33,6 @@
 	let logicalHeight = $state(0);
 
 	const imageElements = new SvelteMap<string, LocalImageData>();
-	let selectedImageId = $state<string | null>(null);
 
 	$inspect('selectedImageId:', selectedImageId);
 	$inspect(imageElements);
@@ -176,8 +177,6 @@
 			console.log('img.id:', img.id);
 
 			if (isSelected) {
-				console.log('SCALING SELECTED IMAGE');
-
 				const centerX = localImageData.localX + localImageData.width / 2;
 				const centerY = localImageData.localY + localImageData.height / 2;
 
@@ -362,18 +361,10 @@
 	}
 
 	$effect(() => {
+		// Redraw the images when the images or selected image id changes
 		images;
 		selectedImageId;
 		drawImages();
-	});
-
-	$effect(() => {
-		const selectedImage = selectedImageId ? images.find((img) => img.id === selectedImageId) : null;
-		if (selectedImage) {
-			onSelectedImageChanged(selectedImage);
-		} else {
-			onSelectedImageChanged(null);
-		}
 	});
 </script>
 
