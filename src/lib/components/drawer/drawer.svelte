@@ -18,7 +18,7 @@
 <Drawer.Root open={isOpen} onClose={() => (selectedImageId = null)}>
 	<Drawer.Portal>
 		<Drawer.Overlay />
-		<Drawer.Content>
+		<Drawer.Content class="mx-auto max-w-md">
 			<Drawer.Header>
 				<Drawer.Title>Image Details</Drawer.Title>
 				<Drawer.Description>ID: {selectedImageId || 'None'}</Drawer.Description>
