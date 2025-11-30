@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as Drawer from '$lib/components/ui/drawer';
+	import UploadSticker from './uploadSticker.svelte';
 
 	let { isOpen = $bindable(false) }: { isOpen: boolean } = $props();
 
@@ -17,10 +18,7 @@
 				<Drawer.Description>Choose a sticker to add to your canvas</Drawer.Description>
 			</Drawer.Header>
 			<div class="p-4">
-				<p class="text-sm text-muted-foreground">
-					This is placeholder content for the add sticker drawer. You can add sticker options and
-					upload functionality here.
-				</p>
+				<UploadSticker />
 			</div>
 			<Drawer.Footer>
 				<p class="text-xs text-muted-foreground">Click outside to close</p>

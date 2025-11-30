@@ -47,6 +47,7 @@
 	},
 	"dependencies": {
 		"bits-ui": "^2.14.4",
+		"exif-js": "^2.3.0",
 		"lucide-svelte": "^0.555.0"
 	}
 }
