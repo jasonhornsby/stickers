@@ -9,13 +9,15 @@
 		selectedImageId = $bindable(null),
 		canvas = $bindable(null),
 		onUserPositionChange,
-		onBackgroundClick
+		onBackgroundClick,
+		initialZoom = undefined
 	}: {
 		initialImages: StoredImage[];
 		selectedImageId: string | null;
 		canvas: HTMLCanvasElement | null;
 		onUserPositionChange?: (viewport: UserViewport) => void;
 		onBackgroundClick?: (x: number, y: number) => void;
+		initialZoom?: number;
 	} = $props();
 
 	let bgCanvas: HTMLCanvasElement;
@@ -44,6 +46,7 @@
 	let dpr = $state(1);
 	let logicalWidth = $state(0);
 	let logicalHeight = $state(0);
+	let zoom = $state(1); // Zoom factor - lower values zoom out, higher values zoom in
 
 	const imageElements = new SvelteMap<string, LocalImageData>();
 
@@ -61,6 +64,13 @@
 		logicalWidth = bgCanvas.width / dpr;
 		logicalHeight = bgCanvas.height / dpr;
 
+		// Set initial zoom based on screen width if not provided
+		if (initialZoom !== undefined) {
+			zoom = initialZoom;
+		} else {
+			zoom = calculateResponsiveZoom();
+		}
+
 		resizeCanvas();
 		window.addEventListener('resize', resizeCanvas);
 
@@ -69,6 +79,23 @@
 
 		return () => window.removeEventListener('resize', resizeCanvas);
 	});
+
+	/**
+	 * Calculate zoom factor based on screen width for responsive display
+	 * Desktop (>1024px): 1.0x (100%)
+	 * Tablet (768-1024px): 0.7x (70%)
+	 * Mobile (<768px): 0.5x (50%)
+	 */
+	function calculateResponsiveZoom(): number {
+		const width = window.innerWidth;
+		if (width > 1024) {
+			return 1.0;
+		} else if (width > 768) {
+			return 0.7;
+		} else {
+			return 0.5;
+		}
+	}
 
 	function loadImages(): void {
 		for (const img of initialImages) {
@@ -128,6 +155,11 @@
 		bgCtx.scale(dpr, dpr);
 		imgCtx.scale(dpr, dpr);
 
+		// Update zoom based on screen size if initialZoom was not provided
+		if (initialZoom === undefined) {
+			zoom = calculateResponsiveZoom();
+		}
+
 		// Center the canvas on first initialization
 		if (!isInitialized) {
 			offsetX = rect.width / 2;
@@ -157,17 +189,18 @@
 		bgCtx.clearRect(0, 0, logicalWidth, logicalHeight);
 		bgCtx.save();
 		bgCtx.translate(offsetX, offsetY);
+		bgCtx.scale(zoom, zoom);
 
 		// Draw repeating background texture - only visible tiles
 		if (backgroundImage) {
 			const tileWidth = backgroundImage.width * 0.7;
 			const tileHeight = backgroundImage.height * 0.7;
 
-			// Calculate visible area in world coordinates
-			const visibleLeft = -offsetX;
-			const visibleTop = -offsetY;
-			const visibleRight = visibleLeft + logicalWidth;
-			const visibleBottom = visibleTop + logicalHeight;
+			// Calculate visible area in world coordinates (accounting for zoom)
+			const visibleLeft = -offsetX / zoom;
+			const visibleTop = -offsetY / zoom;
+			const visibleRight = visibleLeft + logicalWidth / zoom;
+			const visibleBottom = visibleTop + logicalHeight / zoom;
 
 			// Calculate which tiles to draw
 			const startCol = Math.floor(visibleLeft / tileWidth);
@@ -196,6 +229,7 @@
 		imgCtx.clearRect(0, 0, logicalWidth, logicalHeight);
 		imgCtx.save();
 		imgCtx.translate(offsetX, offsetY);
+		imgCtx.scale(zoom, zoom);
 
 		for (const img of images) {
 			const localImageData = imageElements.get(img.id);
@@ -235,8 +269,8 @@
 	function getCanvasCoordinates(e: MouseEvent): { x: number; y: number } {
 		const rect = imgCanvas.getBoundingClientRect();
 		return {
-			x: e.clientX - rect.left - offsetX,
-			y: e.clientY - rect.top - offsetY
+			x: (e.clientX - rect.left - offsetX) / zoom,
+			y: (e.clientY - rect.top - offsetY) / zoom
 		};
 	}
 
@@ -389,11 +423,30 @@
 	}
 
 	$effect(() => {
-		// Redraw the images when the images or selected image id changes
+		// Redraw the images when the images, selected image id, or zoom changes
 		images;
 		selectedImageId;
+		zoom;
 		drawImages();
 	});
+
+	$effect(() => {
+		// Redraw background when zoom changes
+		zoom;
+		drawBackground();
+	});
+
+	// Export function to manually set zoom (useful for zoom controls)
+	export function setZoom(newZoom: number): void {
+		zoom = Math.max(0.1, Math.min(3, newZoom)); // Clamp between 0.1x and 3x
+		drawBackground();
+		drawImages();
+	}
+
+	// Export function to get current zoom
+	export function getZoom(): number {
+		return zoom;
+	}
 </script>
 
 <div class="relative h-full w-full" style="touch-action: none; overscroll-behavior: none;">
