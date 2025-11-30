@@ -6,6 +6,8 @@
 	import { AddStickerDrawer } from '$lib/components/addStickerDrawer';
 	import { Plus, X } from 'lucide-svelte';
 	import Button from '$lib/components/ui/button/button.svelte';
+	import { preload } from '@imgly/background-removal';
+	import { onMount } from 'svelte';
 
 	const { data } = $props();
 
@@ -31,6 +33,12 @@
 
 		addStickerOpen = true;
 	}
+
+	onMount(() => {
+		preload().then(() => {
+			console.log('Background removal preloaded');
+		});
+	});
 
 	// Update URL when selectedImageId changes
 	$effect(() => {

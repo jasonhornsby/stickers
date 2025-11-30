@@ -1,13 +1,18 @@
 <script lang="ts">
 	import Wizard from './wizard.svelte';
 	import { Button } from '$lib/components/ui/button';
-	import { Check, CloudUpload } from 'lucide-svelte';
+	import { CloudUpload } from 'lucide-svelte';
 	import { onDestroy } from 'svelte';
+	import { removeBackground } from '@imgly/background-removal';
+	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
 
 	let fileInput: HTMLInputElement;
 	let selectedFile: File | null = $state(null);
 	let imagePreviewUrl: string | null = $state(null);
 	let currentStep = $state(0);
+
+	let removeBackgroundLoading: boolean = $state(false);
+	let removedBackgroundImageUrl: string | null = $state(null);
 
 	const steps = [
 		{
@@ -16,9 +21,9 @@
 			description: 'Select an image file to upload'
 		},
 		{
-			id: 'customize',
-			title: 'Customize',
-			description: 'Adjust sticker settings (coming soon)'
+			id: 'cleanup',
+			title: 'Remove Background',
+			description: 'Remove the background of the sticker'
 		}
 	];
 
@@ -42,6 +47,22 @@
 		}
 	}
 
+	function doRemoveBackground() {
+		removeBackgroundLoading = true;
+		removeBackground(selectedFile)
+			.then((result) => {
+				removeBackgroundLoading = false;
+				const imageUrl = URL.createObjectURL(result);
+				removedBackgroundImageUrl = imageUrl;
+				console.log('Background removed', result);
+			})
+			.catch((error) => {
+				removeBackgroundLoading = false;
+				console.error('Error removing background', error);
+			});
+		console.log('Removing background');
+	}
+
 	onDestroy(() => {
 		// Clean up the object URL when component is destroyed
 		if (imagePreviewUrl) {
@@ -61,7 +82,7 @@
 				class="hidden"
 			/>
 
-			{#if selectedFile && imagePreviewUrl}
+			{#if selectedFile && imagePreviewUrl && !removeBackgroundLoading}
 				<div class="rounded-lg border-2 border-gray-200 bg-gray-50 p-6">
 					<div class="flex flex-col gap-4">
 						<div class="flex items-center justify-center">
@@ -76,7 +97,15 @@
 						</div>
 					</div>
 				</div>
-				<Button onclick={nextStep} class="mt-4 w-full" size="lg">Continue</Button>
+				<Button
+					onclick={() => {
+						nextStep();
+						doRemoveBackground();
+					}}
+					disabled={!selectedFile}
+					class="mt-4 w-full"
+					size="lg">Continue</Button
+				>
 			{:else}
 				<button
 					onclick={handleUploadClick}
@@ -88,11 +117,18 @@
 				</button>
 			{/if}
 		{:else if currentStep === 1}
-			<!-- Step 2: Customize (Placeholder) -->
-			<div class="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-				<p class="text-gray-600">Additional customization options will be added here.</p>
-				<p class="mt-2 text-sm text-gray-500">You can add size, position, and other settings.</p>
-			</div>
+			{#if removeBackgroundLoading}
+				<Spinner />
+			{:else}
+				<div class="flex flex-col items-center justify-center">
+					<img
+						src={removedBackgroundImageUrl}
+						alt="Removed background"
+						class="max-h-40 rounded-lg object-contain"
+					/>
+					<Button onclick={() => nextStep()}>Continue</Button>
+				</div>
+			{/if}
 		{/if}
 	{/snippet}
 </Wizard>
