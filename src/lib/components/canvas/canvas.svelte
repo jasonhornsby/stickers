@@ -8,12 +8,14 @@
 		initialImages,
 		selectedImageId = $bindable(null),
 		canvas = $bindable(null),
-		onUserPositionChange
+		onUserPositionChange,
+		onBackgroundClick
 	}: {
 		initialImages: StoredImage[];
 		selectedImageId: string | null;
 		canvas: HTMLCanvasElement | null;
 		onUserPositionChange?: (viewport: UserViewport) => void;
+		onBackgroundClick?: (x: number, y: number) => void;
 	} = $props();
 
 	let bgCanvas: HTMLCanvasElement;
@@ -280,6 +282,7 @@
 
 	function handleBackgroundClick(x: number, y: number): void {
 		selectedImageId = null;
+		onBackgroundClick?.(x, y);
 	}
 
 	function handleMouseDown(e: MouseEvent): void {
@@ -401,7 +404,7 @@
 	></canvas>
 	<canvas
 		bind:this={imgCanvas}
-		class="images-canvas absolute top-0 left-0 z-10 h-full w-full"
+		class="images-canvas absolute top-0 left-0 z-1 h-full w-full"
 		style="touch-action: none;"
 		onmousedown={handleMouseDown}
 		onmousemove={handleMouseMove}

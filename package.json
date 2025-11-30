@@ -46,6 +46,7 @@
 		"vite-plugin-qrcode": "^0.3.0"
 	},
 	"dependencies": {
-		"bits-ui": "^2.14.4"
+		"bits-ui": "^2.14.4",
+		"lucide-svelte": "^0.555.0"
 	}
 }

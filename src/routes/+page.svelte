@@ -2,7 +2,10 @@
 	import { Canvas, type UserViewport } from '$lib/components/canvas';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import Drawer from '$lib/components/drawer/drawer.svelte';
+	import { StickerDrawer } from '$lib/components/stickerDrawer';
+	import { AddStickerDrawer } from '$lib/components/addStickerDrawer';
+	import { Plus, X } from 'lucide-svelte';
+	import Button from '$lib/components/ui/button/button.svelte';
 
 	const { data } = $props();
 
@@ -12,6 +15,8 @@
 	let selectedImageId: string | null = $state($page.url.searchParams.get(GET_PARAMETER_NAME));
 	let canvasContainer: HTMLCanvasElement | null = $state(null);
 	let previousSelectedId: string | null = $state(null);
+	let addStickerMode: boolean = $state(false);
+	let addStickerOpen: boolean = $state(false);
 	let userViewport = $state<UserViewport | null>(null);
 
 	$inspect('selectedImage:', selectedImageId);
@@ -19,6 +24,12 @@
 
 	function handleUserPositionChange(viewport: UserViewport): void {
 		userViewport = viewport;
+	}
+
+	function handleBackgroundClick(x: number, y: number): void {
+		if (!addStickerMode) return;
+
+		addStickerOpen = true;
 	}
 
 	// Update URL when selectedImageId changes
@@ -52,12 +63,21 @@
 	class="relative h-dvh w-full overflow-hidden bg-green-100 outline-none"
 	style="touch-action: none; overscroll-behavior: none;"
 >
+	<div class="absolute bottom-0 left-[50%] z-10 flex w-fit -translate-x-1/2 justify-center p-4">
+		{#if addStickerMode}
+			<Button onclick={() => (addStickerMode = false)}><X /></Button>
+		{:else}
+			<Button onclick={() => (addStickerMode = true)}><Plus /></Button>
+		{/if}
+	</div>
 	<Canvas
 		bind:canvas={canvasContainer}
 		initialImages={data.initialImages}
 		bind:selectedImageId
 		onUserPositionChange={handleUserPositionChange}
+		onBackgroundClick={handleBackgroundClick}
 	/>
 </div>
 
-<Drawer bind:selectedImageId />
+<StickerDrawer bind:selectedImageId />
+<AddStickerDrawer bind:isOpen={addStickerOpen} />
