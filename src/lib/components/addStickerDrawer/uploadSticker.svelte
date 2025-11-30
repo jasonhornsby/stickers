@@ -24,6 +24,16 @@
 			id: 'cleanup',
 			title: 'Remove Background',
 			description: 'Remove the background of the sticker'
+		},
+		{
+			id: 'info',
+			title: 'Info',
+			description: 'Add sticker information'
+		},
+		{
+			id: 'upload',
+			title: 'Upload',
+			description: 'Time to upload your sticker to the canvas'
 		}
 	];
 
@@ -43,7 +53,6 @@
 
 			selectedFile = files[0];
 			imagePreviewUrl = URL.createObjectURL(selectedFile);
-			console.log('Selected file:', selectedFile);
 		}
 	}
 
@@ -67,6 +76,9 @@
 		// Clean up the object URL when component is destroyed
 		if (imagePreviewUrl) {
 			URL.revokeObjectURL(imagePreviewUrl);
+		}
+		if (removedBackgroundImageUrl) {
+			URL.revokeObjectURL(removedBackgroundImageUrl);
 		}
 	});
 </script>
@@ -129,6 +141,17 @@
 					<Button onclick={() => nextStep()}>Continue</Button>
 				</div>
 			{/if}
+		{:else if currentStep === 2}
+			<!-- Info step content goes here -->
+			<div class="flex flex-col gap-4">
+				<p class="text-center text-gray-500">Info step content coming soon...</p>
+				<Button onclick={() => nextStep()}>Continue</Button>
+			</div>
+		{:else if currentStep === 3}
+			<!-- Upload step content goes here -->
+			<div class="flex flex-col gap-4">
+				<p class="text-center text-gray-500"><Button>Upload</Button></p>
+			</div>
 		{/if}
 	{/snippet}
 </Wizard>

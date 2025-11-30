@@ -13,10 +13,6 @@
 	<Drawer.Portal>
 		<Drawer.Overlay />
 		<Drawer.Content class="mx-auto max-w-md">
-			<Drawer.Header>
-				<Drawer.Title>Add Sticker</Drawer.Title>
-				<Drawer.Description>Choose a sticker to add to your canvas</Drawer.Description>
-			</Drawer.Header>
 			<div class="p-4">
 				<UploadSticker />
 			</div>

@@ -56,15 +56,11 @@
 
 <div class="wizard-container">
 	<!-- Step Indicators -->
-	<div class="mb-6 flex items-center justify-center gap-2">
+	<div class="mb-3 flex items-center justify-center gap-1">
 		{#each steps as step, index}
-			<button
-				onclick={() => goToStep(index)}
-				class="flex items-center gap-2 transition-all"
-				disabled={index > currentStep}
-			>
+			<div class="flex items-center gap-1">
 				<div
-					class="flex h-8 w-8 items-center justify-center rounded-full transition-all {index ===
+					class="flex h-6 w-6 items-center justify-center rounded-full transition-all {index ===
 					currentStep
 						? 'bg-blue-500 text-white'
 						: index < currentStep
@@ -72,25 +68,25 @@
 							: 'bg-gray-200 text-gray-500'}"
 				>
 					{#if index < currentStep}
-						<Check class="h-5 w-5" />
+						<Check class="h-3 w-3" />
 					{:else}
-						<span class="text-sm font-semibold">{index + 1}</span>
+						<span class="text-xs font-semibold">{index + 1}</span>
 					{/if}
 				</div>
 				{#if index < steps.length - 1}
 					<div
-						class="h-1 w-8 transition-all {index < currentStep ? 'bg-green-500' : 'bg-gray-200'}"
+						class="h-0.5 w-4 transition-all {index < currentStep ? 'bg-green-500' : 'bg-gray-200'}"
 					></div>
 				{/if}
-			</button>
+			</div>
 		{/each}
 	</div>
 
 	<!-- Step Title and Description -->
-	<div class="mb-4 text-center">
-		<h3 class="text-lg font-semibold text-gray-900">{steps[currentStep].title}</h3>
+	<div class="mb-3 text-center">
+		<h3 class="text-base font-semibold text-gray-900">{steps[currentStep].title}</h3>
 		{#if steps[currentStep].description}
-			<p class="text-sm text-gray-600">{steps[currentStep].description}</p>
+			<p class="text-xs text-gray-600">{steps[currentStep].description}</p>
 		{/if}
 	</div>
 
