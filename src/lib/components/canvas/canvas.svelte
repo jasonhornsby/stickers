@@ -1,17 +1,19 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import type { StoredImage } from '$lib/image';
-	import type { LocalImageData } from './canvas.types';
+	import type { LocalImageData, UserViewport } from './canvas.types';
 	import { SvelteMap } from 'svelte/reactivity';
 
 	let {
 		initialImages,
 		selectedImageId = $bindable(null),
-		canvas = $bindable(null)
+		canvas = $bindable(null),
+		onUserPositionChange
 	}: {
 		initialImages: StoredImage[];
 		selectedImageId: string | null;
 		canvas: HTMLCanvasElement | null;
+		onUserPositionChange?: (viewport: UserViewport) => void;
 	} = $props();
 
 	let bgCanvas: HTMLCanvasElement;
@@ -24,6 +26,13 @@
 	let hasMoved: boolean = false; // Track if mouse has moved during drag
 	let offsetX: number = 0,
 		offsetY: number = 0;
+	// User viewport in stored coordinates (no DPI scaling) - matches coordinate system of stored images
+	let userViewport = $state<UserViewport>({
+		offsetX: 0,
+		offsetY: 0,
+		width: 0,
+		height: 0
+	});
 	let isInitialized: boolean = false;
 	let backgroundImage: HTMLImageElement | null = null;
 	let cursor: 'grab' | 'grabbing' | 'pointer' = $state('grab');
@@ -86,6 +95,20 @@
 		}
 	}
 
+	function updateStoredOffsets(): void {
+		// offsetX, offsetY, logicalWidth, and logicalHeight are already in logical coordinates (CSS pixels)
+		// which match the coordinate system of stored images (img.x, img.y)
+		userViewport = {
+			offsetX: offsetX,
+			offsetY: offsetY,
+			width: logicalWidth,
+			height: logicalHeight
+		};
+
+		// Notify parent component of viewport change
+		onUserPositionChange?.(userViewport);
+	}
+
 	function resizeCanvas(): void {
 		const rect = bgCanvas.getBoundingClientRect();
 
@@ -109,6 +132,9 @@
 			offsetY = rect.height / 2;
 			isInitialized = true;
 		}
+
+		// Update stored coordinates whenever canvas is resized
+		updateStoredOffsets();
 
 		if (bgCtx && imgCtx) {
 			drawBackground();
@@ -165,7 +191,6 @@
 	}
 
 	function drawImages(): void {
-		console.log('starting to draw images');
 		imgCtx.clearRect(0, 0, logicalWidth, logicalHeight);
 		imgCtx.save();
 		imgCtx.translate(offsetX, offsetY);
@@ -175,9 +200,6 @@
 			if (!localImageData?.isLoaded) continue;
 
 			const isSelected = selectedImageId === img.id;
-
-			console.log('selectedImageId:', selectedImageId);
-			console.log('img.id:', img.id);
 
 			if (isSelected) {
 				const centerX = localImageData.localX + localImageData.width / 2;
@@ -195,7 +217,6 @@
 				);
 				imgCtx.restore();
 			} else {
-				console.log(localImageData);
 				imgCtx.drawImage(
 					localImageData.img,
 					localImageData.localX,
@@ -259,7 +280,6 @@
 
 	function handleBackgroundClick(x: number, y: number): void {
 		selectedImageId = null;
-		console.log('clicked on background', x, y);
 	}
 
 	function handleMouseDown(e: MouseEvent): void {
@@ -284,6 +304,7 @@
 
 		offsetX = e.clientX - startX;
 		offsetY = e.clientY - startY;
+		updateStoredOffsets();
 		drawBackground();
 		drawImages();
 		e.preventDefault();
@@ -337,6 +358,7 @@
 
 		offsetX = touch.clientX - startX;
 		offsetY = touch.clientY - startY;
+		updateStoredOffsets();
 		drawBackground();
 		drawImages();
 	}

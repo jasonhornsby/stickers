@@ -16,3 +16,15 @@ export type LocalImageData =
         width: number,
         height: number,
     }
+
+/**
+ * UserViewport represents the user's current viewport position and dimensions.
+ * All coordinates are in stored coordinates (logical CSS pixels, no DPI scaling).
+ * This matches the coordinate system of stored images (img.x, img.y).
+ */
+export type UserViewport = {
+    offsetX: number;
+    offsetY: number;
+    width: number;
+    height: number;
+}

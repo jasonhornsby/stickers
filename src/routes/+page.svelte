@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Canvas from '$lib/components/canvas/canvas.svelte';
+	import { Canvas, type UserViewport } from '$lib/components/canvas';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import Drawer from '$lib/components/drawer/drawer.svelte';
@@ -12,8 +12,14 @@
 	let selectedImageId: string | null = $state($page.url.searchParams.get(GET_PARAMETER_NAME));
 	let canvasContainer: HTMLCanvasElement | null = $state(null);
 	let previousSelectedId: string | null = $state(null);
+	let userViewport = $state<UserViewport | null>(null);
 
 	$inspect('selectedImage:', selectedImageId);
+	$inspect('userViewport:', userViewport);
+
+	function handleUserPositionChange(viewport: UserViewport): void {
+		userViewport = viewport;
+	}
 
 	// Update URL when selectedImageId changes
 	$effect(() => {
@@ -46,7 +52,12 @@
 	class="relative h-dvh w-full overflow-hidden bg-green-100 outline-none"
 	style="touch-action: none; overscroll-behavior: none;"
 >
-	<Canvas bind:canvas={canvasContainer} initialImages={data.initialImages} bind:selectedImageId />
+	<Canvas
+		bind:canvas={canvasContainer}
+		initialImages={data.initialImages}
+		bind:selectedImageId
+		onUserPositionChange={handleUserPositionChange}
+	/>
 </div>
 
 <Drawer bind:selectedImageId />
