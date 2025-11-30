@@ -6,10 +6,12 @@
 
 	let {
 		initialImages,
-		selectedImageId = $bindable(null)
+		selectedImageId = $bindable(null),
+		canvas = $bindable(null)
 	}: {
 		initialImages: StoredImage[];
 		selectedImageId: string | null;
+		canvas: HTMLCanvasElement | null;
 	} = $props();
 
 	let bgCanvas: HTMLCanvasElement;
@@ -42,6 +44,7 @@
 	onMount(() => {
 		bgCtx = bgCanvas.getContext('2d')!;
 		imgCtx = imgCanvas.getContext('2d')!;
+		canvas = imgCanvas;
 
 		dpr = window.devicePixelRatio || 1;
 		logicalWidth = bgCanvas.width / dpr;
@@ -368,15 +371,16 @@
 	});
 </script>
 
-<div class="relative h-full w-full">
+<div class="relative h-full w-full" style="touch-action: none; overscroll-behavior: none;">
 	<canvas
 		bind:this={bgCanvas}
 		class="background-canvas absolute top-0 left-0 z-0 h-full w-full"
-		style="cursor: {cursor}"
+		style="cursor: {cursor}; touch-action: none;"
 	></canvas>
 	<canvas
 		bind:this={imgCanvas}
 		class="images-canvas absolute top-0 left-0 z-10 h-full w-full"
+		style="touch-action: none;"
 		onmousedown={handleMouseDown}
 		onmousemove={handleMouseMove}
 		onmouseup={handleMouseUp}
