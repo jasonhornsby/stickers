@@ -56,7 +56,7 @@
 	let images: StoredImage[] = $state(initialImages);
 
 	onMount(() => {
-		bgCtx = bgCanvas.getContext('2d')!;
+		bgCtx = bgCanvas.getContext('2d', { alpha: false })!;
 		imgCtx = imgCanvas.getContext('2d')!;
 		canvas = imgCanvas;
 

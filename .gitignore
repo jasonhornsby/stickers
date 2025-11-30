@@ -5,8 +5,10 @@ node_modules
 .vercel
 .netlify
 .wrangler
+pocketbase
 /.svelte-kit
 /build
+/pb_data
 
 # OS
 .DS_Store
