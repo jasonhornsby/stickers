@@ -95,3 +95,17 @@
 		{@render children?.({ currentStep, nextStep, previousStep, canGoNext, canGoBack, isLastStep })}
 	</div>
 </div>
+
+<style>
+	.wizard-container {
+		/* Mobile: 60vh minimum height */
+		min-height: 60vh;
+	}
+
+	/* Desktop: 600px minimum height */
+	@media (min-width: 768px) {
+		.wizard-container {
+			min-height: 600px;
+		}
+	}
+</style>

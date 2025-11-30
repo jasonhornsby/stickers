@@ -11,7 +11,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
-		"lint": "prettier --check . && eslint ."
+		"lint": "prettier --check . && eslint .",
+		"pb:types": "npx pocketbase-typegen --db ./pb_data/data.db --out ./src/lib/pocketbase-types.ts"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
@@ -50,6 +51,8 @@
 		"bits-ui": "^2.14.4",
 		"exif-js": "^2.3.0",
 		"lucide-svelte": "^0.555.0",
-		"onnxruntime-web": "^1.21.0"
+		"onnxruntime-web": "^1.21.0",
+		"pocketbase": "^0.26.3",
+		"zod": "^4.1.13"
 	}
 }

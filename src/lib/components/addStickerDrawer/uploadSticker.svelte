@@ -5,6 +5,7 @@
 	import { onDestroy } from 'svelte';
 	import { removeBackground } from '@imgly/background-removal';
 	import Spinner from '$lib/components/ui/spinner/spinner.svelte';
+	import { uploadSticker } from '$lib/remote/stickers.remote';
 
 	let fileInput: HTMLInputElement;
 	let selectedFile: File | null = $state(null);
@@ -13,6 +14,8 @@
 
 	let removeBackgroundLoading: boolean = $state(false);
 	let removedBackgroundImageUrl: string | null = $state(null);
+
+	let uploadStickerLoading: boolean = $state(false);
 
 	const steps = [
 		{
@@ -70,6 +73,13 @@
 				console.error('Error removing background', error);
 			});
 		console.log('Removing background');
+	}
+
+	async function doUploadSticker() {
+		let uploadStickerLoading = true;
+		const result = await uploadSticker({ x: 0, y: 0 });
+		uploadStickerLoading = false;
+		console.log('Upload sticker result', result);
 	}
 
 	onDestroy(() => {
@@ -132,13 +142,15 @@
 			{#if removeBackgroundLoading}
 				<Spinner />
 			{:else}
-				<div class="flex flex-col items-center justify-center">
-					<img
-						src={removedBackgroundImageUrl}
-						alt="Removed background"
-						class="max-h-40 rounded-lg object-contain"
-					/>
-					<Button onclick={() => nextStep()}>Continue</Button>
+				<div class="flex flex-col gap-4">
+					<div class="flex items-center justify-center">
+						<img
+							src={removedBackgroundImageUrl}
+							alt="Removed background"
+							class="max-h-96 w-full rounded-lg object-contain"
+						/>
+					</div>
+					<Button onclick={() => nextStep()} class="w-full" size="lg">Continue</Button>
 				</div>
 			{/if}
 		{:else if currentStep === 2}
@@ -150,7 +162,9 @@
 		{:else if currentStep === 3}
 			<!-- Upload step content goes here -->
 			<div class="flex flex-col gap-4">
-				<p class="text-center text-gray-500"><Button>Upload</Button></p>
+				<p class="text-center text-gray-500">
+					<Button onclick={() => doUploadSticker()}>Upload</Button>
+				</p>
 			</div>
 		{/if}
 	{/snippet}
